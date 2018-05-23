@@ -13,6 +13,10 @@ RUN mkdir -p ${HOME} ${WORKER_DATA_DIR} ${ALEMBIC_DIR}/alembic/ && \
     chmod 777 ${HOME} ${WORKER_DATA_DIR}
 WORKDIR ${HOME}
 
+RUN pushd /coreapi && \
+    pip3 install --upgrade pip>=10.0.0 && pip3 install . &&\
+    popd && \
+
 COPY requirements.txt /tmp/f8a_worker/
 # Install google.protobuf from source
 # https://github.com/fabric8-analytics/fabric8-analytics-worker/issues/261
