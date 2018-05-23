@@ -13,9 +13,7 @@ RUN mkdir -p ${HOME} ${WORKER_DATA_DIR} ${ALEMBIC_DIR}/alembic/ && \
     chmod 777 ${HOME} ${WORKER_DATA_DIR}
 WORKDIR ${HOME}
 
-RUN pushd /coreapi && \
-    pip3 install --upgrade pip>=10.0.0 && pip3 install . &&\
-    popd && \
+RUN pip3 install --upgrade pip>=10.0.0 && pip3 install . &&\
 
 COPY requirements.txt /tmp/f8a_worker/
 # Install google.protobuf from source
