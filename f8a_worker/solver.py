@@ -7,7 +7,10 @@ from functools import cmp_to_key
 import logging
 from lxml import etree
 from operator import itemgetter
-from pip._internal.req.req_file import parse_requirements
+try: # for pip >= 10
+    from pip._internal.req import parse_requirements
+except ImportError: # for pip <= 9.0.3
+    from pip.req import parse_requirements
 from pip._vendor.packaging.specifiers import _version_split
 import re
 from requests import get
