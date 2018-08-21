@@ -13,11 +13,11 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from selinon import StoragePool
 
 from f8a_worker.enums import EcosystemBackend
-from f8a_worker.models import Analysis, Ecosystem, Package, Version, WorkerResult, APIRequests
+from f8a_worker.models import Analysis, Ecosystem, Package, Version, WorkerResult, APIRequests, StackAnalysisRequest, \
+    RecommendationFeedback
 from f8a_worker.utils import MavenCoordinates
 
 from .postgres_base import PostgresBase
-
 
 Base = declarative_base()
 
@@ -65,13 +65,13 @@ class BayesianPostgres(PostgresBase):
             self.connect()
 
         try:
-            entry = PostgresBase.session.query(WorkerResult.task_result).\
-                join(Analysis).join(Version).join(Package).join(Ecosystem).\
-                filter(WorkerResult.worker == task_name).\
-                filter(Package.name == package).\
-                filter(Version.identifier == version).\
-                filter(Ecosystem.name == ecosystem).\
-                filter(WorkerResult.error.is_(False)).\
+            entry = PostgresBase.session.query(WorkerResult.task_result). \
+                join(Analysis).join(Version).join(Package).join(Ecosystem). \
+                filter(WorkerResult.worker == task_name). \
+                filter(Package.name == package). \
+                filter(Version.identifier == version). \
+                filter(Ecosystem.name == ecosystem). \
+                filter(WorkerResult.error.is_(False)). \
                 order_by(Analysis.finished_at.desc()).first()
         except SQLAlchemyError:
             PostgresBase.session.rollback()
@@ -99,14 +99,14 @@ class BayesianPostgres(PostgresBase):
             self.connect()
 
         try:
-            entry = PostgresBase.session.query(WorkerResult).\
-                join(Analysis).\
-                join(Package).join(Ecosystem).\
-                filter(WorkerResult.worker == task_name).\
+            entry = PostgresBase.session.query(WorkerResult). \
+                join(Analysis). \
+                join(Package).join(Ecosystem). \
+                filter(WorkerResult.worker == task_name). \
                 filter(Version.identifier == version). \
-                filter(Package.name == package).\
-                filter(Ecosystem.name == ecosystem).\
-                filter(WorkerResult.error.is_(error)).\
+                filter(Package.name == package). \
+                filter(Ecosystem.name == ecosystem). \
+                filter(WorkerResult.error.is_(error)). \
                 order_by(Analysis.finished_at.desc()).first()
         except SQLAlchemyError:
             PostgresBase.session.rollback()
@@ -127,12 +127,12 @@ class BayesianPostgres(PostgresBase):
             package = MavenCoordinates.normalize_str(package)
 
         try:
-            count = PostgresBase.session.query(Analysis).\
-                                         join(Version).join(Package).join(Ecosystem).\
-                                         filter(Ecosystem.name == ecosystem).\
-                                         filter(Package.name == package).\
-                                         filter(Version.identifier == version).\
-                                         count()
+            count = PostgresBase.session.query(Analysis). \
+                join(Version).join(Package).join(Ecosystem). \
+                filter(Ecosystem.name == ecosystem). \
+                filter(Package.name == package). \
+                filter(Version.identifier == version). \
+                count()
         except SQLAlchemyError:
             PostgresBase.session.rollback()
             raise
@@ -147,11 +147,11 @@ class BayesianPostgres(PostgresBase):
         :return: a list of task names
         """
         try:
-            task_names = PostgresBase.session.query(WorkerResult.worker).\
-                                              join(Analysis).\
-                                              filter(Analysis.id == analysis_id).\
-                                              filter(WorkerResult.error.is_(False)).\
-                                              all()
+            task_names = PostgresBase.session.query(WorkerResult.worker). \
+                join(Analysis). \
+                filter(Analysis.id == analysis_id). \
+                filter(WorkerResult.error.is_(False)). \
+                all()
         except SQLAlchemyError:
             PostgresBase.session.rollback()
             raise
@@ -180,9 +180,9 @@ class BayesianPostgres(PostgresBase):
         :return: analysis result
         """
         try:
-            return PostgresBase.session.query(Analysis).\
-                                        filter(Analysis.id == analysis_id).\
-                                        one()
+            return PostgresBase.session.query(Analysis). \
+                filter(Analysis.id == analysis_id). \
+                one()
         except (NoResultFound, MultipleResultsFound):
             raise
         except SQLAlchemyError:
@@ -197,9 +197,9 @@ class BayesianPostgres(PostgresBase):
         :return: First entry in api_requests table with matching email id
         """
         try:
-            return PostgresBase.session.query(APIRequests).\
-                                        filter(APIRequests.user_email == email).\
-                                        first()
+            return PostgresBase.session.query(APIRequests). \
+                filter(APIRequests.user_email == email). \
+                first()
         except SQLAlchemyError:
             PostgresBase.session.rollback()
             raise
@@ -271,6 +271,23 @@ class BayesianPostgres(PostgresBase):
                          filter(Package.name == package).
                          filter(Analysis.finished_at.isnot(None)).
                          distinct().all())
+        except SQLAlchemyError:
+            PostgresBase.session.rollback()
+            raise
+
+    @staticmethod
+    def get_recommendation_feedback_by_ecosystem(ecosystem):
+        """Return all recommendation feedback for the given ecosystem.
+                :param
+                ecosystem: str, Ecosystem name
+                return: a list of recommendation feedbacks
+        """
+        try:
+            return chain(*PostgresBase.session.queryquery(RecommendationFeedback).
+                         join(StackAnalysisRequest).join(Ecosystem).
+                         filter(RecommendationFeedback.ecosystem_id == Ecosystem.by_name(ecosystem).id).
+                         filter(RecommendationFeedback.stack_id == StackAnalysisRequest.id).all())
+
         except SQLAlchemyError:
             PostgresBase.session.rollback()
             raise
